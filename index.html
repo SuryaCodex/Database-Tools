@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SQL Explorer — Beginner Database Access Tool</title>
+  <meta name="description" content="Explore and query databases visually — no SQL knowledge required. Step-by-step query builder for beginners." />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════
+     LOADING OVERLAY
+════════════════════════════════════════════════════════════ -->
+<div id="loading-overlay" style="
+  position:fixed;inset:0;background:rgba(5,10,20,0.97);
+  z-index:99999;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:20px;">
+  <div style="
+    width:56px;height:56px;border-radius:50%;
+    border:3px solid rgba(59,130,246,0.2);
+    border-top-color:#3b82f6;
+    animation:spin 0.8s linear infinite;">
+  </div>
+  <div style="color:#8ea8d8;font-size:0.9rem;">Loading database engine…</div>
+  <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     WELCOME MODAL
+════════════════════════════════════════════════════════════ -->
+<div id="welcome-modal">
+  <div class="modal-box">
+    <div class="modal-badge">✨ Beginner Friendly</div>
+    <h1>Welcome to <span>SQL Explorer</span></h1>
+    <p>
+      Explore and query a real database — <strong>no coding knowledge needed.</strong><br>
+      Just follow the step-by-step builder and instantly see your results.
+    </p>
+    <div class="modal-steps">
+      <div class="modal-step">
+        <div class="step-icon">🗄️</div>
+        <div class="step-label">Browse tables in the sidebar</div>
+      </div>
+      <div class="modal-step">
+        <div class="step-icon">🧩</div>
+        <div class="step-label">Build your query visually</div>
+      </div>
+      <div class="modal-step">
+        <div class="step-icon">⚡</div>
+        <div class="step-label">Run and see instant results</div>
+      </div>
+    </div>
+    <button class="btn-primary" id="modal-start-btn">
+      🚀 Start Exploring
+    </button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     GLOSSARY DRAWER
+════════════════════════════════════════════════════════════ -->
+<div id="glossary-drawer">
+  <div class="glossary-head">
+    <h2>📖 SQL Glossary</h2>
+    <button class="btn-close-glossary" id="close-glossary">✕</button>
+  </div>
+  <div class="glossary-items" id="glossary-items"></div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     APP SHELL
+════════════════════════════════════════════════════════════ -->
+<div id="app">
+
+  <!-- ── SIDEBAR ─────────────────────────────────────────── -->
+  <aside id="sidebar">
+    <div class="sidebar-header">
+      <div class="logo">
+        <div class="logo-icon">🗄️</div>
+        <div class="logo-text">SQL<span>Explorer</span></div>
+      </div>
+      <div class="sidebar-subtitle">School Management Database</div>
+    </div>
+
+    <div class="sidebar-section-title">Tables</div>
+    <div id="table-list"></div>
+
+    <!-- Schema panel -->
+    <div id="schema-panel"></div>
+
+    <!-- Glossary button -->
+    <button id="glossary-btn">
+      📖 SQL Glossary <span style="margin-left:auto;font-size:0.7rem;">→</span>
+    </button>
+  </aside>
+
+  <!-- ── MAIN PANEL ──────────────────────────────────────── -->
+  <main id="main">
+
+    <!-- Topbar -->
+    <div id="topbar">
+      <div class="topbar-title">
+        Query Builder
+        <span>— Click a table on the left, then build your query below</span>
+      </div>
+      <div class="tab-bar">
+        <button class="tab-btn active" data-tab="tab-builder">🧩 Builder</button>
+        <button class="tab-btn" data-tab="tab-sql">💻 SQL Preview</button>
+        <button class="tab-btn" data-tab="tab-results">📊 Results</button>
+      </div>
+    </div>
+
+    <!-- Content -->
+    <div id="content">
+
+      <!-- ── TAB 1: QUERY BUILDER ─────────────────────────── -->
+      <div class="tab-panel active" id="tab-builder">
+
+        <!-- Step progress indicator -->
+        <div class="builder-steps">
+          <div class="step-circle active" id="step-dot-1">
+            <span class="num">1</span> Choose Table
+          </div>
+          <span class="step-arrow">›</span>
+          <div class="step-circle" id="step-dot-2">
+            <span class="num">2</span> Pick Columns
+          </div>
+          <span class="step-arrow">›</span>
+          <div class="step-circle" id="step-dot-3">
+            <span class="num">3</span> Filter Rows
+          </div>
+          <span class="step-arrow">›</span>
+          <div class="step-circle" id="step-dot-4">
+            <span class="num">4</span> Sort
+          </div>
+          <span class="step-arrow">›</span>
+          <div class="step-circle" id="step-dot-5">
+            <span class="num">5</span> Run
+          </div>
+        </div>
+
+        <!-- Step 1: Choose Table -->
+        <div class="builder-card animate-in">
+          <h3>🗄️ Step 1 — Choose a Table</h3>
+          <p class="card-desc">Select which table you want to look at. Each table stores a different type of information.</p>
+          <select class="form-select" id="table-select">
+            <option value="">-- Choose a table --</option>
+          </select>
+        </div>
+
+        <!-- Step 2: Choose Columns -->
+        <div class="builder-card animate-in" id="col-grid-container" style="opacity:0.3">
+          <h3>📋 Step 2 — Choose Columns <span style="font-size:0.75rem;color:var(--text-muted);font-weight:400;">(leave all checked to get everything)</span></h3>
+          <p class="card-desc">Tick only the columns you want to see in your results. Checking all = <code style="color:var(--cyan);">SELECT *</code></p>
+          <div class="col-grid" id="col-grid"></div>
+        </div>
+
+        <!-- Step 3: Filter Rows (WHERE) -->
+        <div class="builder-card animate-in" id="filter-section" style="opacity:0.3">
+          <h3>🔍 Step 3 — Filter Rows <span style="font-size:0.75rem;color:var(--text-muted);font-weight:400;">(optional)</span></h3>
+          <p class="card-desc">Add conditions to show only specific rows. Example: show only students with grade = "A".</p>
+          <div id="conditions-list"></div>
+          <button class="btn-add" id="add-condition-btn">＋ Add Condition</button>
+        </div>
+
+        <!-- Step 4: Sort -->
+        <div class="builder-card animate-in" id="sort-section" style="opacity:0.3">
+          <h3>↕️ Step 4 — Sort Results <span style="font-size:0.75rem;color:var(--text-muted);font-weight:400;">(optional)</span></h3>
+          <p class="card-desc">Choose a column to sort by and the direction — Ascending (A→Z / 0→9) or Descending (Z→A / 9→0).</p>
+          <div class="two-col">
+            <div>
+              <label class="form-label" for="sort-col">Sort by column</label>
+              <select class="form-select" id="sort-col">
+                <option value="">-- None --</option>
+              </select>
+            </div>
+            <div>
+              <label class="form-label" for="sort-dir">Direction</label>
+              <select class="form-select" id="sort-dir">
+                <option value="ASC">↑ Ascending (A → Z)</option>
+                <option value="DESC">↓ Descending (Z → A)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 5: Limit + Run -->
+        <div class="builder-card animate-in" id="limit-section" style="opacity:0.3">
+          <h3>🔢 Step 5 — Limit Rows</h3>
+          <p class="card-desc">How many rows should be returned? Drag the slider to change the limit.</p>
+          <div class="limit-row">
+            <input type="range" id="limit-range" min="1" max="500" value="100" />
+            <span class="limit-val" id="limit-display">100</span>
+            <span style="font-size:0.78rem;color:var(--text-muted)">rows</span>
+          </div>
+        </div>
+
+        <!-- Run -->
+        <div class="run-row animate-in" id="run-section" style="opacity:0.3">
+          <button id="run-btn" disabled>
+            ⚡ Run Query
+          </button>
+          <button class="btn-reset" id="reset-btn">↺ Reset</button>
+          <span style="font-size:0.78rem;color:var(--text-muted)">Results appear in the Results tab →</span>
+        </div>
+
+      </div><!-- /tab-builder -->
+
+      <!-- ── TAB 2: SQL PREVIEW ─────────────────────────── -->
+      <div class="tab-panel" id="tab-sql">
+
+        <div class="info-pill">
+          💡 <span>This is the actual SQL query your builder just created. You can also type your own SQL below and run it directly!</span>
+        </div>
+
+        <!-- Auto-generated preview -->
+        <div class="sql-preview-container">
+          <div class="sql-preview-header">
+            <div class="traffic-dots">
+              <span class="dot r"></span>
+              <span class="dot y"></span>
+              <span class="dot g"></span>
+            </div>
+            Generated SQL — Live Preview
+          </div>
+          <div class="sql-code" id="sql-preview-code">
+            <span style="color:var(--text-muted);font-style:italic;">-- Your query will appear here as you build it…</span>
+          </div>
+        </div>
+
+        <!-- Direct SQL editor -->
+        <div class="builder-card">
+          <h3>✏️ Advanced — Write Your Own SQL</h3>
+          <p class="card-desc">Already know some SQL? Type any query here and run it directly.</p>
+          <textarea id="sql-editable" class="form-input" rows="5"
+            placeholder="SELECT * FROM students WHERE age > 19 ORDER BY name ASC LIMIT 10;"
+            style="resize:vertical;font-family:'JetBrains Mono',monospace;font-size:0.85rem;line-height:1.7;"></textarea>
+          <br><br>
+          <button class="btn-primary" id="run-direct-sql" style="font-size:0.88rem;padding:11px 28px;">
+            ▶ Run This SQL
+          </button>
+        </div>
+
+      </div><!-- /tab-sql -->
+
+      <!-- ── TAB 3: RESULTS ────────────────────────────── -->
+      <div class="tab-panel" id="tab-results">
+
+        <div class="results-meta" id="results-meta">
+          <span class="meta-badge blue">Run a query to see results here</span>
+        </div>
+
+        <!-- Empty / error state -->
+        <div class="empty-state" id="results-empty" style="display:flex;">
+          <div class="empty-icon">📊</div>
+          <div class="empty-text">Build your query in the Builder tab and click <strong>Run Query</strong></div>
+        </div>
+
+        <!-- Results table -->
+        <div class="table-wrapper" id="results-table-wrap" style="display:none;">
+          <table class="results-table">
+            <thead id="results-head"></thead>
+            <tbody id="results-body"></tbody>
+          </table>
+        </div>
+
+      </div><!-- /tab-results -->
+
+    </div><!-- /content -->
+  </main>
+</div><!-- /app -->
+
+<!-- ═══════════════════════════════════════════════════════════
+     SCRIPTS (order matters)
+════════════════════════════════════════════════════════════ -->
+<!-- sql.js from CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.2/sql-wasm.js"></script>
+<!-- App modules -->
+<script src="db-engine.js"></script>
+<script src="query-builder.js"></script>
+<script src="app.js"></script>
+
+</body>
+</html>
